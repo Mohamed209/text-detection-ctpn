@@ -1,3 +1,5 @@
+venv/
+data/
 data/dataset/
 __pycache__/
 cache/
