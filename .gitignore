@@ -1,4 +1,4 @@
-data/dataset/
+data/
 __pycache__/
 cache/
 pretrain/
@@ -17,3 +17,6 @@ checkpoints_*/
 *.swp
 *.pb
 *.ckpt
+ven/
+.vscode
+data/demo

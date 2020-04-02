@@ -3,7 +3,7 @@ import os
 import shutil
 import sys
 import time
-
+import uuid
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -104,7 +104,13 @@ def main(argv=None):
                 print("cost time: {:.2f}s".format(cost_time))
 
                 for i, box in enumerate(boxes):
-                    cv2.polylines(img, [box[:8].astype(np.int32).reshape((-1, 1, 2))], True, color=(0, 255, 0),
+                    points=box[:8].astype(np.int32).reshape((-1, 1, 2))
+                    x0,y0=points[0][0][0],points[0][0][1]
+                    x1,y1=points[2][0][0],points[2][0][1]
+                    line=img[y0:y1,x0:x1]
+                    line=cv2.resize(line,(432,32))
+                    cv2.imwrite('/home/mohamed-mossad/Projects/receipt_ocr/test_images/'+im_fn.split('/')[2].split('.')[0]+'*line'+str(i)+'.png',line)
+                    cv2.polylines(img, [points], True, color=(0, 255, 0),
                                   thickness=2)
                 img = cv2.resize(img, None, None, fx=1.0 / rh, fy=1.0 / rw, interpolation=cv2.INTER_LINEAR)
                 cv2.imwrite(os.path.join(FLAGS.output_path, os.path.basename(im_fn)), img[:, :, ::-1])
