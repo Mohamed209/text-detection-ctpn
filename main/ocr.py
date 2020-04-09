@@ -13,8 +13,8 @@ from keras.callbacks import ModelCheckpoint
 from keras.utils import to_categorical
 import keras.backend as K
 from keras.models import load_model
-from operator import ixor
-from functools import reduce
+from collections import Counter
+from string import punctuation
 ###############################################################
 import random
 import matplotlib.pyplot as plt
@@ -28,9 +28,9 @@ from skimage import data
 import skimage.filters as filters
 ##################################################################
 sys.path.append(os.getcwd())
-from utils.text_connector.detectors import TextDetector
-from utils.rpn_msr.proposal_layer import proposal_layer
 from nets import model_train as model
+from utils.rpn_msr.proposal_layer import proposal_layer
+from utils.text_connector.detectors import TextDetector
 tf.app.flags.DEFINE_string('test_data_path', 'data/demo/', '')
 tf.app.flags.DEFINE_string('output_path', 'data/res/', '')
 tf.app.flags.DEFINE_string('gpu', '0', '')
@@ -163,7 +163,7 @@ def merge_boxes(boxes):
     topmost = max(0, min([min(boxes[:, 1]), min(boxes[:, 3])]))
     bottommost = max([max(boxes[:, 5]), max(boxes[:, 7])])
 
-    threshold = 10
+    threshold = 15
     merge_count = 0
     black_list = []
     new_boxes = []
@@ -248,7 +248,7 @@ def crop_boxes(img, boxes):
         line_rect = cv2.boundingRect(pts)
         x, y, w, h = line_rect
         croped_line = img[y:y+h, x:x+w].copy()
-        croped_line = deskew_image(croped_line, [box])
+        #croped_line = deskew_image(croped_line, [box])
         #croped_line = cv2.cvtColor(croped_line, cv2.COLOR_BGR2GRAY)
         #_,croped_line = cv2.threshold(croped_line, 0,255,cv2.THRESH_OTSU)
         #croped_line = cv2.cvtColor(croped_line,cv2.COLOR_GRAY2RGB)
@@ -332,16 +332,17 @@ def ocrline(line, model, letters):
     return text
 
 
-def supress_noise(text):
+def supress_noise(text, special_chars=list(set(punctuation))):
     '''
     handle very long repeated chars , by supressing it
     '''
-    numtxt = [ord(ch) for ch in text]
-    res = reduce(ixor, numtxt)
-    if res == 0 or res == numtxt[0]:
-        return ''
-    else:
-        return text
+    text_len = len(text)
+    freq = Counter(text)
+    for key in freq:
+        if freq[key] > int(0.50*text_len) and key in special_chars:
+            print('suppressed ', text)
+            return ''  # more than 55% of string are one char
+    return text
 
 
 def main(argv=None):
@@ -386,19 +387,21 @@ def main(argv=None):
                 except:
                     print("Error reading image {}!".format(im_fn))
                     continue
+                im = correct_skew(im)
                 input_img = im
                 # Resize image to be feed to the network
                 resized_img, (rh, rw) = resize_image(input_img)
                 # show_img(resized_img,title='original')
                 # Detect text from the resized image
                 img, boxes = detect_text(
-                    resized_img, sess, bbox_pred, cls_pred, cls_prob, input_image, input_im_info)
+                    resized_img, sess, bbox_pred, cls_pred, cls_prob, input_image, input_im_info, mode='O')
                 # Rescale box size (in order to plot it on the orignal image not the resized version)
                 boxes = stretch_boxes(
                     input_img.shape, resized_img.shape, boxes)
                 # crop receipt
                 img, orig_pts = crop_image(input_img, boxes, False)
-                show_img(img, 'cropped')
+                img = correct_skew(img)
+                #show_img(img, 'cropped')
                 # Detect text again from the cropped image
                 img, (rh, rw) = resize_image(img)
                 img, boxes = detect_text(
@@ -407,12 +410,17 @@ def main(argv=None):
                 lines = crop_boxes(img, mergboxes)
                 for idx, line in enumerate(lines):
                     # ocr the line
+                    line = correct_skew(line)
                     #show_img(line, title='line'+str(idx))
-                    with open(FLAGS.output_path+im_fn.split('/')[2].split('.')[0]+'.txt', mode='a+', encoding='utf-8') as res:
+                    with open(FLAGS.output_path+im_fn.split('/')[2].split('.')[0]+'_ocr.txt', mode='a+', encoding='utf-8') as res:
                         prediction = ocrline(line, ocr, letters)
                         prediction = supress_noise(prediction)
-                        res.writelines(prediction)
+                        try:
+                            res.writelines(prediction)
+                        except TypeError:
+                            pass
                         res.write('\n')
+
 
 if __name__ == '__main__':
     tf.app.run()
