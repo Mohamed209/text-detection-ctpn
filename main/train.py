@@ -11,9 +11,9 @@ from nets import model_train as model
 from utils.dataset import data_provider as data_provider
 
 tf.app.flags.DEFINE_float('learning_rate', 1e-5, '')
-tf.app.flags.DEFINE_integer('max_steps', 50000, '')
+tf.app.flags.DEFINE_integer('max_steps', 60000, '') # continue train for another 50k iters
 tf.app.flags.DEFINE_integer('decay_steps', 30000, '')
-tf.app.flags.DEFINE_integer('decay_rate', 0.1, '')
+tf.app.flags.DEFINE_float('decay_rate', 0.1, '')
 tf.app.flags.DEFINE_float('moving_average_decay', 0.997, '')
 tf.app.flags.DEFINE_integer('num_readers', 4, '')
 tf.app.flags.DEFINE_string('gpu', '0', '')
@@ -72,7 +72,7 @@ def main(argv=None):
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    config.gpu_options.per_process_gpu_memory_fraction = 0.95
+    config.gpu_options.per_process_gpu_memory_fraction = 0.98
     config.allow_soft_placement = True
     with tf.Session(config=config) as sess:
         if FLAGS.restore:
@@ -85,11 +85,13 @@ def main(argv=None):
             restore_step = 0
             if FLAGS.pretrained_model_path is not None:
                 variable_restore_op(sess)
-
+        #print("before loading data")
         data_generator = data_provider.get_batch(num_workers=FLAGS.num_readers)
+        #print("after loading data")
         start = time.time()
         for step in range(restore_step, FLAGS.max_steps):
             data = next(data_generator)
+            #print("data >>>  ",data)
             ml, tl, _, summary_str = sess.run([model_loss, total_loss, train_op, summary_op],
                                               feed_dict={input_image: data[0],
                                                          input_bbox: data[1],
@@ -115,3 +117,4 @@ def main(argv=None):
 
 if __name__ == '__main__':
     tf.app.run()
+

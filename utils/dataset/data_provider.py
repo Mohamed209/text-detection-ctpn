@@ -10,7 +10,6 @@ from utils.dataset.data_util import GeneratorEnqueuer
 
 DATA_FOLDER = "data/dataset/mlt/"
 
-
 def get_training_data():
     img_files = []
     exts = ['jpg', 'png', 'jpeg', 'JPG']
