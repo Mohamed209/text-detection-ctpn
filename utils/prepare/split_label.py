@@ -8,7 +8,7 @@ from tqdm import tqdm
 sys.path.append(os.getcwd())
 from utils import orderConvex, shrink_poly
 DATA_FOLDER = "data/finetune_ds/"
-OUTPUT = "data/data/dataset/mlt/"
+OUTPUT = "data/dataset/mlt/"
 MAX_LEN = 1200
 MIN_LEN = 600
 
