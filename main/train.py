@@ -11,7 +11,7 @@ from nets import model_train as model
 from utils.dataset import data_provider as data_provider
 
 tf.app.flags.DEFINE_float('learning_rate', 1e-5, '')
-tf.app.flags.DEFINE_integer('max_steps', 60000, '') # continue train for another 50k iters
+tf.app.flags.DEFINE_integer('max_steps', 65000, '') # continue train for another 15k iters
 tf.app.flags.DEFINE_integer('decay_steps', 30000, '')
 tf.app.flags.DEFINE_float('decay_rate', 0.1, '')
 tf.app.flags.DEFINE_float('moving_average_decay', 0.997, '')

@@ -24,7 +24,7 @@ for im_fn in tqdm(im_fns):
     try:
         _, fn = os.path.split(im_fn)
         bfn, ext = os.path.splitext(fn)
-        if ext.lower() not in ['.jpg', '.png']:
+        if ext.lower() not in ['.jpg', '.png','.jpeg','.bmp']:
             continue
 
         gt_path = os.path.join(DATA_FOLDER, "label", 'gt_' + bfn + '.txt')
