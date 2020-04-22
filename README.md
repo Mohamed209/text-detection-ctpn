@@ -28,6 +28,12 @@ It will generate a nms.so and a bbox.so in current folder.
 ```shell
 python ./main/demo.py
 ```
+- to run ocr on detected text lines
+
+```
+python ./main/ocr.py
+```
+this will save for each image a .txt file with its ocr content
 ***
 # training
 ## prepare data

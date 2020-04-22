@@ -1,17 +1,15 @@
 # coding=utf-8
-from nets import model_train as model
 import os
 import shutil
 import sys
 import time
-import uuid
 import cv2
 import numpy as np
 import tensorflow as tf
-
 sys.path.append(os.getcwd())
-from utils.text_connector.detectors import TextDetector
+from nets import model_train as model
 from utils.rpn_msr.proposal_layer import proposal_layer
+from utils.text_connector.detectors import TextDetector
 tf.app.flags.DEFINE_string('test_data_path', 'data/demo/', '')
 tf.app.flags.DEFINE_string('output_path', 'data/res/', '')
 tf.app.flags.DEFINE_string('gpu', '0', '')
@@ -21,7 +19,7 @@ FLAGS = tf.app.flags.FLAGS
 
 def get_images():
     files = []
-    exts = ['jpg', 'png', 'jpeg', 'JPG']
+    exts = ['jpg', 'png', 'jpeg', 'JPG', 'tiff']
     for parent, dirnames, filenames in os.walk(FLAGS.test_data_path):
         for filename in filenames:
             for ext in exts:
@@ -50,12 +48,17 @@ def resize_image(img):
     return re_im, (new_h / img_size[0], new_w / img_size[1])
 
 
+def show_img(img, title="test"):
+    cv2.namedWindow(title, cv2.WINDOW_NORMAL)
+    cv2.imshow(title, img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
 def main(argv=None):
     if os.path.exists(FLAGS.output_path):
         shutil.rmtree(FLAGS.output_path)
     os.makedirs(FLAGS.output_path)
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu
-
     with tf.get_default_graph().as_default():
         input_image = tf.placeholder(
             tf.float32, shape=[None, None, None, 3], name='input_image')
@@ -80,6 +83,7 @@ def main(argv=None):
 
             im_fn_list = get_images()
             for im_fn in im_fn_list:
+                img_name = os.path.basename(im_fn)
                 print('===============')
                 print(im_fn)
                 start = time.time()
@@ -88,7 +92,6 @@ def main(argv=None):
                 except:
                     print("Error reading image {}!".format(im_fn))
                     continue
-
                 img, (rh, rw) = resize_image(im)
                 h, w, c = img.shape
                 im_info = np.array([h, w, c]).reshape([1, 3])
@@ -101,33 +104,22 @@ def main(argv=None):
                 scores = textsegs[:, 0]
                 textsegs = textsegs[:, 1:5]
 
-                textdetector = TextDetector(DETECT_MODE='H')
+                textdetector = TextDetector(DETECT_MODE='O')
                 boxes = textdetector.detect(
                     textsegs, scores[:, np.newaxis], img.shape[:2])
                 boxes = np.array(boxes, dtype=np.int)
 
                 cost_time = (time.time() - start)
                 print("cost time: {:.2f}s".format(cost_time))
-
-                for i, box in enumerate(boxes):
+                for idx, box in enumerate(boxes):
                     points = box[:8].astype(np.int32).reshape((-1, 1, 2))
-                    x0, y0 = points[0][0][0], points[0][0][1]
-                    x1, y1 = points[2][0][0], points[2][0][1]
-                    line = img[y0:y1, x0:x1]
-                    line = cv2.resize(line, (432, 32))
                     cv2.polylines(img, [points], True, color=(0, 255, 0),
                                   thickness=2)
                 img = cv2.resize(img, None, None, fx=1.0 / rh,
                                  fy=1.0 / rw, interpolation=cv2.INTER_LINEAR)
-
+                #show_img(img,'box preds')
                 cv2.imwrite(os.path.join(FLAGS.output_path,
                                          os.path.basename(im_fn)), img[:, :, ::-1])
-                with open(os.path.join(FLAGS.output_path, os.path.splitext(os.path.basename(im_fn))[0]) + ".txt",
-                          "w") as f:
-                    for i, box in enumerate(boxes):
-                        line = ",".join(str(box[k]) for k in range(8))
-                        line += "," + str(scores[i]) + "\r\n"
-                        f.writelines(line)
 
 
 if __name__ == '__main__':
